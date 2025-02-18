@@ -1,217 +1,272 @@
+import pandas as pd
+import json
+import folium
+from folium import plugins
+import branca.colormap as cm
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+import numpy as np
+from datetime import datetime
+import calendar
+from pathlib import Path
+import branca.element as be
 
-# Initialize the app
-app = dash.Dash(__name__)
-server = app.server  # needed for Render deployment
-
-# Read and prepare data
-df = pd.read_csv('data/facc.csv', skipinitialspace=True)
-
-# Clean zone data
-df['ZONE'] = df['ZONE'].astype(str).str.strip()
-df['ZONE'] = df['ZONE'].apply(lambda x: str(int(float(x))) if x.replace('.', '').isdigit() else 'Unknown')
-
-# Clean severity data
-df['ACCIDENT_SEVERITY'] = df['ACCIDENT_SEVERITY'].astype(str).str.strip()
-
-# Clean nationality data
-df['NATIONALITY_GROUP_OF_ACCIDENT_'] = df['NATIONALITY_GROUP_OF_ACCIDENT_'].astype(str).str.strip()
-df.loc[df['NATIONALITY_GROUP_OF_ACCIDENT_'].isin(['nan', 'NaN', 'None', '']), 'NATIONALITY_GROUP_OF_ACCIDENT_'] = 'Unknown'
-
-# Get unique values for dropdowns
-severity_options = [{'label': sev, 'value': sev} 
-                   for sev in sorted(df['ACCIDENT_SEVERITY'].unique()) if sev not in ['nan', 'NaN', 'None', '']]
-nationality_options = [{'label': nat, 'value': nat} 
-                      for nat in sorted(df['NATIONALITY_GROUP_OF_ACCIDENT_'].unique()) if nat not in ['nan', 'NaN', 'None', '']]
-
-# Color scheme
-colors = {
-    'background': '#111111',
-    'card_bg': 'rgba(255, 255, 255, 0.05)',
-    'text': '#FFFFFF',
-    'neon_blue': '#00ffff',
-    'grey': '#808080',
-    'dark_grey': '#333333',
-}
-
-# Custom CSS with glassmorphism
-app.index_string = '''
-<!DOCTYPE html>
-<html>
-    <head>
-        {%metas%}
-        <title>{%title%}</title>
-        {%favicon%}
-        {%css%}
-        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-        <style>
-            body {
-                background-color: #111111;
-                background-image: 
-                    radial-gradient(circle at 10% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 40%),
-                    radial-gradient(circle at 90% 80%, rgba(128, 128, 128, 0.1) 0%, transparent 40%);
-                margin: 0;
-                font-family: 'Space Grotesk', sans-serif;
-            }
-            .glass-card {
-                background: rgba(0, 0, 0, 0.7);
-                backdrop-filter: blur(10px);
-                border-radius: 15px;
-                border: 1px solid rgba(0, 255, 255, 0.2);
-                box-shadow: 0 8px 32px 0 rgba(0, 255, 255, 0.1);
-                padding: 20px;
-                margin-bottom: 20px;
-            }
-            .glass-card:hover {
-                border: 1px solid rgba(0, 255, 255, 0.3);
-                box-shadow: 0 8px 32px 0 rgba(0, 255, 255, 0.2);
-            }
-            .dash-dropdown .Select-control {
-                background-color: rgba(0, 0, 0, 0.8) !important;
-                border: 1px solid rgba(0, 255, 255, 0.2) !important;
-                border-radius: 10px;
-            }
-            .dash-dropdown .Select-menu-outer {
-                background-color: rgba(0, 0, 0, 0.95) !important;
-                border: 1px solid rgba(0, 255, 255, 0.2) !important;
-                border-radius: 10px;
-                z-index: 1000 !important;
-            }
-            .dash-dropdown .Select-value-label {
-                color: #FFFFFF !important;
-            }
-            .dash-dropdown .Select-menu-outer .Select-option {
-                background-color: rgba(0, 0, 0, 0.95) !important;
-                color: #FFFFFF !important;
-            }
-            .dash-dropdown .Select-menu-outer .Select-option:hover {
-                background-color: rgba(0, 255, 255, 0.2) !important;
-            }
-            .filter-container {
-                position: relative;
-                z-index: 100;
-            }
-        </style>
-    </head>
-    <body>
-        {%app_entry%}
-        <footer>
-            {%config%}
-            {%scripts%}
-            {%renderer%}
-        </footer>
-    </body>
-</html>
-'''
-
-# Layout
-app.layout = html.Div([
-    html.H1("Qatar Traffic Accidents Analysis",
-            style={
-                'textAlign': 'center',
-                'color': colors['neon_blue'],
-                'marginBottom': '30px',
-                'fontFamily': 'Space Grotesk',
-                'textShadow': '0 0 10px rgba(0, 255, 255, 0.5)'
-            }),
-    
-    # Filters
-    html.Div([
-        html.Div([
-            html.Label("Accident Severity", style={'color': colors['neon_blue']}),
-            dcc.Dropdown(
-                id='severity-filter',
-                options=severity_options,
-                multi=True,
-                className='dash-dropdown'
-            )
-        ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top'}),
+class QatarAccidentsDashboard:
+    def __init__(self, accidents_file='facc.csv', polygons_file='qatar_zones_polygons.json'):
+        self.accidents_file = accidents_file
+        self.polygons_file = polygons_file
+        self.df = None
+        self.zones_data = None
+        self.zone_names = self.initialize_zone_names()
+        self.current_year = None
         
-        html.Div([
-            html.Label("Nationality", style={'color': colors['neon_blue']}),
-            dcc.Dropdown(
-                id='nationality-filter',
-                options=nationality_options,
-                multi=True,
-                className='dash-dropdown'
-            )
-        ], style={'width': '30%', 'display': 'inline-block', 'marginLeft': '20px', 'verticalAlign': 'top'}),
+        # Color scheme
+        self.colors = {
+            'background': '#111111',
+            'text': '#FFFFFF',
+            'neon_pink': '#FF00FF',
+            'neon_cyan': '#00FFFF',
+            'neon_green': '#39FF14',
+            'maroon': '#800000'
+        }
         
-    ], className='glass-card filter-container'),
-    
-    # Yearly Trend Chart
-    html.Div([
-        dcc.Graph(id='yearly-trend')
-    ], className='glass-card'),
-    
-    # Top 10 Zones Chart
-    html.Div([
-        dcc.Graph(id='top-zones')
-    ], className='glass-card'),
-    
-], style={'padding': '20px'})
+        # Load and process data
+        self.load_data()
+        
+    def initialize_zone_names(self):
+        try:
+            with open('zone_names.json', 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Warning: Could not load zone names: {e}")
+            return {}
 
-# Callbacks
-@app.callback(
-    [Output('yearly-trend', 'figure'),
-     Output('top-zones', 'figure')],
-    [Input('severity-filter', 'value'),
-     Input('nationality-filter', 'value')]
-)
-def update_charts(selected_severity, selected_nationality):
-    # Filter data based on selections
-    filtered_df = df.copy()
-    
-    if selected_severity:
-        filtered_df = filtered_df[filtered_df['ACCIDENT_SEVERITY'].isin(selected_severity)]
-    if selected_nationality:
-        filtered_df = filtered_df[filtered_df['NATIONALITY_GROUP_OF_ACCIDENT_'].isin(selected_nationality)]
-    
-    # Yearly trend
-    yearly_counts = filtered_df.groupby('ACCIDENT_YEAR').size().reset_index(name='count')
-    yearly_fig = go.Figure()
-    yearly_fig.add_trace(go.Scatter(
-        x=yearly_counts['ACCIDENT_YEAR'],
-        y=yearly_counts['count'],
-        mode='lines+markers',
-        line=dict(color=colors['neon_blue'], width=3),
-        marker=dict(size=8, color=colors['grey'])
-    ))
-    yearly_fig.update_layout(
-        title='Yearly Accident Trend',
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color=colors['text'], family='Space Grotesk'),
-        xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
-        yaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
-    )
-    
-    # Top 10 zones by year
-    zone_year_counts = filtered_df.groupby(['ACCIDENT_YEAR', 'ZONE']).size().reset_index(name='count')
-    top_zones = zone_year_counts.groupby('ZONE')['count'].sum().nlargest(10).index
-    zone_year_filtered = zone_year_counts[zone_year_counts['ZONE'].isin(top_zones)]
-    
-    zones_fig = px.line(zone_year_filtered, 
-                       x='ACCIDENT_YEAR', 
-                       y='count', 
-                       color='ZONE',
-                       title='Yearly Accidents in Top 10 Zones')
-    zones_fig.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color=colors['text'], family='Space Grotesk'),
-        xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
-        yaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
-        showlegend=True,
-        legend_title_text='Zone'
-    )
-    
-    return yearly_fig, zones_fig
+        
+    def load_data(self):
+        # Load accidents data
+        self.df = pd.read_csv(self.accidents_file, skipinitialspace=True)
+        
+        # Clean data
+        self.df['ZONE'] = self.df['ZONE'].astype(str).str.strip()
+        self.df['ZONE'] = self.df['ZONE'].apply(lambda x: 
+            str(int(float(x))) if x.replace('.', '').isdigit() else 'Unknown')
+        
+        # Convert time to hour
+        self.df['HOUR'] = self.df['ACCIDENT_TIME'].str.extract('(\d+)').astype(float)
+        
+        # Set current year to the most recent year
+        self.current_year = self.df['ACCIDENT_YEAR'].max()
+        
+        # Load polygon data
+        try:
+            with open(self.polygons_file, 'r') as f:
+                self.zones_data = json.load(f)
+        except:
+            print("Warning: Could not load polygon data")
 
-if __name__ == '__main__':
-    app.run_server(debug=True)
+    def create_map(self, year):
+        # Create base map
+        m = folium.Map(
+            location=[25.2867, 51.5333],
+            zoom_start=11,
+            tiles='CartoDB dark_matter',
+            prefer_canvas=True
+        )
+        
+        # Get accident counts for the selected year
+        year_data = self.df[self.df['ACCIDENT_YEAR'] == year]
+        zone_counts = year_data['ZONE'].value_counts().to_dict()
+        max_count = max(zone_counts.values()) if zone_counts else 1
+        
+        # Create color scale
+        colormap = cm.LinearColormap(
+            colors=['#ff00ff', '#00ffff', '#ff0000'],
+            vmin=0,
+            vmax=max_count
+        )
+        
+        # Add zones to map
+        for zone, count in zone_counts.items():
+            try:
+                if zone.lower() == 'unknown':
+                    continue
+                    
+                zone_int = str(int(float(zone)))
+                zone_data = self.zones_data.get(zone_int)
+                zone_name = self.zone_names.get(zone_int, f'Zone {zone_int}')
+                
+                if zone_data:
+                    coordinates = [[p['lat'], p['lng']] for p in zone_data['coordinates']]
+                    opacity = 0.2 + (count / max_count * 0.8)
+                    
+                    folium.Polygon(
+                        locations=coordinates,
+                        weight=0,
+                        fill=True,
+                        fill_color=colormap(count),
+                        fill_opacity=opacity,
+                        popup=f'{zone_name}<br>Accidents: {count}',
+                        tooltip=zone_name
+                    ).add_to(m)
+                    
+            except Exception as e:
+                print(f"Error processing zone {zone}: {str(e)}")
+                
+        # Add the color scale
+        colormap.add_to(m)
+        
+        # Save the map to HTML
+        map_path = 'assets/map.html'
+        m.save(map_path)
+        return map_path
+
+    def create_dashboard(self):
+        app = dash.Dash(__name__)
+        
+        # Add custom font
+        app.index_string = '''
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>Qatar Traffic Accidents Analysis</title>
+                <link href="https://api.fontshare.com/v2/css?f[]=space-grotesk@400,700&display=swap" rel="stylesheet">
+                {%metas%}
+                {%favicon%}
+                {%css%}
+            </head>
+            <body>
+                {%app_entry%}
+                <footer>
+                    {%config%}
+                    {%scripts%}
+                    {%renderer%}
+                </footer>
+            </body>
+        </html>
+        '''
+        
+        # Create initial map
+        initial_map_path = self.create_map(self.current_year)
+        
+        app.layout = html.Div(style={
+            'backgroundColor': self.colors['background'], 
+            'padding': '20px',
+            'minHeight': '100vh',
+            'fontFamily': 'Space Grotesk, sans-serif'
+        }, children=[
+            html.H1('Qatar Traffic Accidents Analysis',
+                   style={'color': self.colors['neon_cyan'], 
+                          'textAlign': 'center'}),
+            
+            # Main content container
+            html.Div(style={
+                'display': 'flex',
+                'flexWrap': 'wrap',
+                'gap': '20px',
+                'margin': '20px 0'
+            }, children=[
+                # Left section - Map
+                html.Div(style={
+                    'flex': '2',
+                    'minWidth': '600px'
+                }, children=[
+                    # Year selector above map
+                    html.Div(style={
+                        'marginBottom': '20px',
+                        'backgroundColor': '#222',
+                        'padding': '20px',
+                        'borderRadius': '10px',
+                    }, children=[
+                        html.Label('Select Year:', 
+                                 style={'color': self.colors['text'],
+                                       'marginRight': '10px'}),
+                        dcc.Dropdown(
+                            id='year-selector',
+                            options=[{'label': str(int(year)), 'value': year} 
+                                    for year in sorted(self.df['ACCIDENT_YEAR'].unique())],
+                            value=self.current_year,
+                            style={
+                                'width': '200px',
+                                'backgroundColor': self.colors['background'],
+                                'color': 'black'
+                            }
+                        )
+                    ]),
+                    # Map
+                    html.Div(style={
+                        'height': '600px',
+                        'backgroundColor': '#222',
+                        'borderRadius': '10px',
+                        'overflow': 'hidden'
+                    }, children=[
+                        html.Iframe(
+                            id='map-iframe',
+                            srcDoc=open(initial_map_path, 'r').read(),
+                            style={'width': '100%', 'height': '100%', 'border': 'none'}
+                        )
+                    ])
+                ]),
+                
+                # Right section - Stats
+                html.Div(style={
+                    'flex': '1',
+                    'minWidth': '300px',
+                    'backgroundColor': '#222',
+                    'padding': '20px',
+                    'borderRadius': '10px',
+                    'color': self.colors['text'],
+                    'height': '680px',  # Add this line
+                    'overflowY': 'auto'  # Add this line for scrolling
+                }, children=[
+                    html.H3('Zone Statistics', 
+                           style={'color': self.colors['neon_pink']}),
+                    html.Div(id='zone-stats-content')
+                ])
+            ])
+        ])
+        
+        @app.callback(
+            [Output('map-iframe', 'srcDoc'),
+             Output('zone-stats-content', 'children')],
+            [Input('year-selector', 'value')]
+        )
+        def update_map_and_stats(selected_year):
+            # Update map
+            map_path = self.create_map(selected_year)
+            map_html = open(map_path, 'r').read()
+            
+            # Update stats
+            year_data = self.df[self.df['ACCIDENT_YEAR'] == selected_year]
+            zone_counts = year_data['ZONE'].value_counts().sort_values(ascending=False)
+            
+            stats_content = []
+            for zone, count in zone_counts.items():
+                zone_name = self.zone_names.get(str(zone), f'Zone {zone}')
+                stats_content.append(html.Div(style={
+                    'marginBottom': '10px',
+                    'padding': '8px',
+                    'backgroundColor': 'rgba(255, 0, 255, 0.1)',
+                    'borderRadius': '5px'
+                }, children=[
+                    html.Div(zone_name, style={'color': self.colors['neon_cyan']}),
+                    html.Div(f'Accidents: {count}', style={'fontSize': '0.9em'})
+                ]))
+            
+            return map_html, stats_content
+        
+        return app
+    
+    def run_dashboard(self, debug=True):
+        # Create assets folder for map
+        Path('assets').mkdir(exist_ok=True)
+        
+        app = self.create_dashboard()
+        app.run_server(debug=debug)
+
+if __name__ == "__main__":
+    dashboard = QatarAccidentsDashboard()
+    dashboard.run_dashboard()
