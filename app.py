@@ -158,18 +158,18 @@ class QatarAccidentsDashboard:
         initial_map_path = self.create_map(self.current_year)
         
         app.layout = html.Div(style={
-            'backgroundColor': '#000000', 
+            'backgroundColor': self.colors['background'], 
             'padding': '20px',
             'minHeight': '100vh',
             'fontFamily': 'Space Grotesk, sans-serif'
         }, children=[
             html.Div(style={
-                'backgroundColor': '#800000',  # Maroon
+                'backgroundColor': self.colors['title_background'],
                 'padding': '10px',
                 'borderRadius': '5px'
             }, children=[
                 html.H1('Qatar Traffic Accidents Analysis',
-                       style={'color': '#F5F5DC',  # Beige
+                       style={'color': self.colors['title_text'], 
                               'textAlign': 'center'})
             ]),
             
@@ -191,7 +191,7 @@ class QatarAccidentsDashboard:
                 }, children=[
                     html.Div(style={
                         'fontSize': '3em',
-                        'color': '#FF00FF',
+                        'color': self.colors['neon_cyan'],
                         'fontWeight': 'bold'
                     }, children=[
                         html.I(className='fas fa-car-crash', style={
@@ -199,12 +199,12 @@ class QatarAccidentsDashboard:
                             'top': '10px',
                             'left': '10px',
                             'fontSize': '1.5em',
-                            'color': '#FF00FF'
+                            'color': self.colors['neon_pink']
                         }),
                         html.Span(id=f'{title.lower().replace(" ", "-")}-value', children=str(value))
                     ]),
                     html.H4(title, style={
-                        'color': '#FF00FF',
+                        'color': self.colors['neon_pink'],
                         'marginTop': '10px',
                         'fontSize': '1em'
                     })
@@ -234,7 +234,7 @@ class QatarAccidentsDashboard:
                         'padding': '20px',
                     }, children=[
                         html.Label('Select Year:', 
-                                 style={'color': '#FFFFFF',
+                                 style={'color': self.colors['text'],
                                        'marginRight': '10px'}),
                         dcc.Dropdown(
                             id='year-selector',
@@ -243,7 +243,7 @@ class QatarAccidentsDashboard:
                             value=self.current_year,
                             style={
                                 'width': '200px',
-                                'backgroundColor': '#000000',
+                                'backgroundColor': self.colors['background'],
                                 'color': 'black'
                             }
                         )
@@ -266,12 +266,12 @@ class QatarAccidentsDashboard:
                     'flex': '1',
                     'minWidth': '300px',
                     'padding': '20px',
-                    'color': '#FFFFFF',
+                    'color': self.colors['text'],
                     'height': '680px',  # Add this line
                     'overflowY': 'auto'  # Add this line for scrolling
                 }, children=[
                     html.H3('Zone Statistics', 
-                           style={'color': '#FF00FF'}),
+                           style={'color': self.colors['neon_pink']}),
                     html.Div(id='zone-stats-content')
                 ])
             ]),
@@ -288,10 +288,10 @@ class QatarAccidentsDashboard:
                     'flex': '1',
                     'minWidth': '300px',
                     'padding': '20px',
-                    'color': '#FFFFFF'
+                    'color': self.colors['text']
                 }, children=[
                     html.H3('Accident Severity by Category', 
-                           style={'color': '#FF00FF'}),
+                           style={'color': self.colors['text']}),
                     dcc.Dropdown(
                         id='category-selector',
                         options=[
@@ -302,7 +302,7 @@ class QatarAccidentsDashboard:
                         value='NATIONALITY_GROUP_OF_ACCIDENT_',
                         style={
                             'width': '200px',
-                            'backgroundColor': '#000000',
+                            'backgroundColor': self.colors['background'],
                             'color': 'black'
                         }
                     ),
@@ -314,10 +314,10 @@ class QatarAccidentsDashboard:
                     'flex': '1',
                     'minWidth': '300px',
                     'padding': '20px',
-                    'color': '#FFFFFF'
+                    'color': self.colors['text']
                 }, children=[
                     html.H3('Age vs Number of Accidents', 
-                           style={'color': '#FF00FF'}),
+                           style={'color': self.colors['text']}),
                     dcc.Graph(id='age-scatter-plot')
                 ])
             ])
