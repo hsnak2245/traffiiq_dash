@@ -26,11 +26,13 @@ class QatarAccidentsDashboard:
         
         # Color scheme
         self.colors = {
-            'background': '#111111',
-            'text': '#FFFFFF',
-            'neon_pink': '#FF00FF',
-            'neon_cyan': '#00FFFF',
-            'neon_green': '#39FF14',
+            'background': '#F5F5DC',  # Beige
+            'text': '#4D4D4D',  # Grey
+            'title_background': '#800000',  # Maroon
+            'title_text': '#F5F5DC',  # Beige
+            'neon_pink': '#800000',  # Maroon
+            'neon_cyan': '#B03060',  # Shade of Maroon
+            'neon_green': '#8B0000',  # Dark Maroon
             'maroon': '#800000'
         }
         
@@ -73,7 +75,7 @@ class QatarAccidentsDashboard:
         m = folium.Map(
             location=[25.2867, 51.5333],
             zoom_start=11,
-            tiles='CartoDB dark_matter',
+            tiles='CartoDB positron',
             prefer_canvas=True
         )
         
@@ -84,7 +86,7 @@ class QatarAccidentsDashboard:
         
         # Create color scale
         colormap = cm.LinearColormap(
-            colors=['#ff00ff', '#00ffff', '#ff0000'],
+            colors=['#F5F5DC', '#B03060', '#8B0000'],  # Beige to shades of maroon
             vmin=0,
             vmax=max_count
         )
@@ -161,9 +163,15 @@ class QatarAccidentsDashboard:
             'minHeight': '100vh',
             'fontFamily': 'Space Grotesk, sans-serif'
         }, children=[
-            html.H1('Qatar Traffic Accidents Analysis',
-                   style={'color': self.colors['neon_cyan'], 
-                          'textAlign': 'center'}),
+            html.Div(style={
+                'backgroundColor': self.colors['title_background'],
+                'padding': '10px',
+                'borderRadius': '5px'
+            }, children=[
+                html.H1('Qatar Traffic Accidents Analysis',
+                       style={'color': self.colors['title_text'], 
+                              'textAlign': 'center'})
+            ]),
             
             # Metrics Row
             html.Div(style={
@@ -177,9 +185,7 @@ class QatarAccidentsDashboard:
                 *[html.Div(style={
                     'flex': '1',
                     'minWidth': '200px',
-                    'backgroundColor': '#222',
                     'padding': '20px',
-                    'borderRadius': '10px',
                     'textAlign': 'center',
                     'position': 'relative'
                 }, children=[
@@ -225,9 +231,7 @@ class QatarAccidentsDashboard:
                     # Year selector above map
                     html.Div(style={
                         'marginBottom': '20px',
-                        'backgroundColor': '#222',
                         'padding': '20px',
-                        'borderRadius': '10px',
                     }, children=[
                         html.Label('Select Year:', 
                                  style={'color': self.colors['text'],
@@ -247,8 +251,6 @@ class QatarAccidentsDashboard:
                     # Map
                     html.Div(style={
                         'height': '600px',
-                        'backgroundColor': '#222',
-                        'borderRadius': '10px',
                         'overflow': 'hidden'
                     }, children=[
                         html.Iframe(
@@ -263,9 +265,7 @@ class QatarAccidentsDashboard:
                 html.Div(style={
                     'flex': '1',
                     'minWidth': '300px',
-                    'backgroundColor': '#222',
                     'padding': '20px',
-                    'borderRadius': '10px',
                     'color': self.colors['text'],
                     'height': '680px',  # Add this line
                     'overflowY': 'auto'  # Add this line for scrolling
@@ -287,13 +287,11 @@ class QatarAccidentsDashboard:
                 html.Div(style={
                     'flex': '1',
                     'minWidth': '300px',
-                    'backgroundColor': '#222',
                     'padding': '20px',
-                    'borderRadius': '10px',
                     'color': self.colors['text']
                 }, children=[
                     html.H3('Accident Severity by Category', 
-                           style={'color': self.colors['neon_pink']}),
+                           style={'color': self.colors['text']}),
                     dcc.Dropdown(
                         id='category-selector',
                         options=[
@@ -315,13 +313,11 @@ class QatarAccidentsDashboard:
                 html.Div(style={
                     'flex': '1',
                     'minWidth': '300px',
-                    'backgroundColor': '#222',
                     'padding': '20px',
-                    'borderRadius': '10px',
                     'color': self.colors['text']
                 }, children=[
                     html.H3('Age vs Number of Accidents', 
-                           style={'color': self.colors['neon_pink']}),
+                           style={'color': self.colors['text']}),
                     dcc.Graph(id='age-scatter-plot')
                 ])
             ])
@@ -369,7 +365,8 @@ class QatarAccidentsDashboard:
             fig.update_layout(
                 plot_bgcolor=self.colors['background'],
                 paper_bgcolor=self.colors['background'],
-                font_color=self.colors['text']
+                font_color=self.colors['text'],
+                colorway=['rgb(245,245,220)', 'rgb(176,48,96)', 'rgb(139,0,0)']  # Beige to shades of maroon
             )
             return fig
 
@@ -402,7 +399,8 @@ class QatarAccidentsDashboard:
             fig.update_layout(
                 plot_bgcolor=self.colors['background'],
                 paper_bgcolor=self.colors['background'],
-                font_color=self.colors['text']
+                font_color=self.colors['text'],
+                colorway=['rgb(245,245,220)', 'rgb(176,48,96)', 'rgb(139,0,0)']  # Beige to shades of maroon
             )
             return fig
         
