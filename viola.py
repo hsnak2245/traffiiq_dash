@@ -99,8 +99,14 @@ try:
         'minHeight': '100vh',
         'fontFamily': 'Space Grotesk, sans-serif'
     }, children=[
-        html.H1("Qatar Traffic Violation Pattern Analysis", 
-                style={'color': '#00FFFF', 'textAlign': 'center', 'fontSize': '3em', 'fontWeight': 'bold'}),
+        html.Div(style={
+            'backgroundColor': '#800000',  # Maroon
+            'padding': '10px',
+            'borderRadius': '5px'
+        }, children=[
+            html.H1("Qatar Traffic Violation Pattern Analysis", 
+                    style={'color': '#F5F5DC', 'textAlign': 'center', 'fontSize': '3em', 'fontWeight': 'bold'})  # Beige
+        ]),
         
         # New section for monthly violation line chart
         html.Div(style={

@@ -40,19 +40,25 @@ class LicenseDashboard:
         cache = Cache(app.server, config={'CACHE_TYPE': 'simple'})
         
         app.layout = html.Div(style={
-            'backgroundColor': self.colors['background'], 
+            'backgroundColor': '#000000', 
             'padding': '20px',
             'minHeight': '100vh',
             'fontFamily': 'Space Grotesk, sans-serif'
         }, children=[
-            html.H1('TraffiQ',
-                   style={'color': self.colors['neon_cyan'], 
-                          'textAlign': 'center',
-                          'fontSize': '3em',
-                          'fontWeight': 'bold'}),
+            html.Div(style={
+                'backgroundColor': '#800000',  # Maroon
+                'padding': '10px',
+                'borderRadius': '5px'
+            }, children=[
+                html.H1('TraffiQ',
+                       style={'color': '#F5F5DC',  # Beige
+                              'textAlign': 'center',
+                              'fontSize': '3em',
+                              'fontWeight': 'bold'})
+            ]),
             
             # License Section
-            html.H2('License Dashboard', style={'color': self.colors['neon_pink'], 'textAlign': 'center'}),
+            html.H2('License Dashboard', style={'color': '#FF00FF', 'textAlign': 'center'}),
             html.Div(style={
                 'display': 'flex',
                 'flexWrap': 'wrap',
@@ -65,11 +71,11 @@ class LicenseDashboard:
                     'backgroundColor': '#000000',
                     'padding': '20px',
                     'borderRadius': '10px',
-                    'color': self.colors['text'],
+                    'color': '#FFFFFF',
                     'border': '1px solid #333'  # Thin border
                 }, children=[
                     html.H3('Annual License Issue', 
-                           style={'color': self.colors['neon_pink']}),
+                           style={'color': '#FF00FF'}),
                     dcc.Graph(id='annual-license-line-chart')
                 ]),
                 
@@ -80,11 +86,11 @@ class LicenseDashboard:
                     'backgroundColor': '#000000',
                     'padding': '20px',
                     'borderRadius': '10px',
-                    'color': self.colors['text'],
+                    'color': '#FFFFFF',
                     'border': '1px solid #333'  # Thin border
                 }, children=[
                     html.H3('Age at License Issue', 
-                           style={'color': self.colors['neon_pink']}),
+                           style={'color': '#FF00FF'}),
                     dcc.Graph(id='age-bubble-chart')
                 ]),
                 
@@ -95,11 +101,11 @@ class LicenseDashboard:
                     'backgroundColor': '#000000',
                     'padding': '20px',
                     'borderRadius': '10px',
-                    'color': self.colors['text'],
+                    'color': '#FFFFFF',
                     'border': '1px solid #333'  # Thin border
                 }, children=[
                     html.H3('License Issued by Category', 
-                           style={'color': self.colors['neon_pink']}),
+                           style={'color': '#FF00FF'}),
                     html.Div(style={'display': 'flex', 'gap': '10px'}, children=[
                         dcc.Dropdown(
                             id='license-category-selector',
@@ -110,7 +116,7 @@ class LicenseDashboard:
                             value='GENDER',
                             style={
                                 'width': '200px',
-                                'backgroundColor': self.colors['background'],
+                                'backgroundColor': '#000000',
                                 'color': 'black'
                             }
                         ),
@@ -120,7 +126,7 @@ class LicenseDashboard:
                             value=self.license_df['YEAR'].max(),
                             style={
                                 'width': '200px',
-                                'backgroundColor': self.colors['background'],
+                                'backgroundColor': '#000000',
                                 'color': 'black'
                             }
                         )
